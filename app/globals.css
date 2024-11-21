@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Inria+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Playwrite+CU:wght@100..400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-brown: 27, 25%, 55%;
+  --primary-light: 27, 25%, 65%;
+  --primary-dark: 27, 25%, 45%;
+  --accent-beige: 27, 15%, 85%;
+  --accent-cream: 27, 15%, 95%;
+  --text-dark: 27, 25%, 25%;
+  --text-light: 27, 15%, 98%;
+}
+
+@layer base {
+  :root {
+    --background: 27 15% 98%;
+    --foreground: 27 25% 25%;
+    --card: 27 15% 98%;
+    --card-foreground: 27 25% 25%;
+    --popover: 27 15% 98%;
+    --popover-foreground: 27 25% 25%;
+    --primary: 27 25% 55%;
+    --primary-foreground: 27 15% 98%;
+    --secondary: 27 15% 95%;
+    --secondary-foreground: 27 25% 35%;
+    --muted: 27 15% 95%;
+    --muted-foreground: 27 25% 45%;
+    --accent: 27 15% 85%;
+    --accent-foreground: 27 25% 25%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 27 15% 98%;
+    --border: 27 15% 85%;
+    --input: 27 15% 85%;
+    --ring: 27 25% 55%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Lato', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cinzel', serif;
+  }
+
+  .font-display {
+    font-family: 'Cinzel', serif;
+  }
+
+  .font-body {
+    font-family: 'Lato', sans-serif;
+  }
+
+  .font-accent {
+    font-family: 'Inria Sans', sans-serif;
+  }
+
+  .font-special {
+    font-family: 'Playwrite CU', cursive;
+  }
+}
