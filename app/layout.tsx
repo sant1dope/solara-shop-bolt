@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import { CartProvider } from '@/components/providers/cart-provider';
+import Footer from '@/components/layout/footer/footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
               <Header />
               <main>{children}</main>
               <Toaster />
+              <Footer />
             </div>
           </CartProvider>
         </ThemeProvider>

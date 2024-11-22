@@ -11,7 +11,7 @@ export function Loading({ className }: LoadingProps) {
     <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
       <div className={cn("relative flex items-center justify-center min-h-[200px]", className)}>
         {/* Main 'S' letter */}
-        <div className="text-6xl font-special text-primary-dark z-10">
+        <div className="text-9xl font-display font-medium text-primary-dark z-10 mt-4">
           S
         </div>
         

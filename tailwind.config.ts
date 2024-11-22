@@ -12,6 +12,7 @@ const config: Config = {
       fontFamily: {
         sans: ['Lato', 'sans-serif'],
         display: ['Cinzel', 'serif'],
+        display2: ['Ysabeau SC', 'serif'],
         accent: ['Inria Sans', 'sans-serif'],
         special: ['Playwrite CU', 'cursive'],
       },

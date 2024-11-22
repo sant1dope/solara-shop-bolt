@@ -7,27 +7,23 @@ import ProductCard from './product-card';
 interface ProductGridProps {
   products: Product[];
   searchTerm?: string;
-  selectedCategories?: string[];
-  selectedColors?: string[];
+  selectedFilter: string | null;
   sortBy?: string;
 }
 
 export default function ProductGrid({
   products,
   searchTerm = '',
-  selectedCategories = [],
-  selectedColors = [],
+  selectedFilter = null,
   sortBy = 'featured'
 }: ProductGridProps) {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    if (!Array.isArray(products)) {
-      setFilteredProducts([]);
-      return;
-    }
-
     let filtered = [...products];
+
+    // Only show active products
+    filtered = filtered.filter(product => product.isActive);
 
     // Apply search filter
     if (searchTerm) {
@@ -37,33 +33,32 @@ export default function ProductGrid({
       );
     }
 
-    // Apply category filter
-    if (selectedCategories.length > 0) {
-      filtered = filtered.filter(product =>
-        selectedCategories.includes(product.category.toLowerCase())
-      );
-    }
-
-    // Apply color filter
-    if (selectedColors.length > 0) {
-      filtered = filtered.filter(product =>
-        product.color && selectedColors.includes(product.color.toLowerCase())
+    // Apply single filter (category, product type, or color)
+    if (selectedFilter) {
+      filtered = filtered.filter(product => 
+        product.category?.toLowerCase() === selectedFilter ||
+        product.productType?.toLowerCase() === selectedFilter ||
+        product.color?.toLowerCase() === selectedFilter
       );
     }
 
     // Apply sorting
     switch (sortBy) {
       case 'price-asc':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => (a.discountedPrice || a.price) - (b.discountedPrice || b.price));
         break;
       case 'price-desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => (b.discountedPrice || b.price) - (a.discountedPrice || a.price));
         break;
       case 'newest':
         filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         break;
       case 'best-selling':
-        // Implement if you have sales data
+        filtered = filtered.filter(product => 
+          product.badges?.some(badge => badge.type === 'most-loved')
+        ).concat(filtered.filter(product => 
+          !product.badges?.some(badge => badge.type === 'most-loved')
+        ));
         break;
       default:
         // 'featured' - keep original order
@@ -71,7 +66,7 @@ export default function ProductGrid({
     }
 
     setFilteredProducts(filtered);
-  }, [products, searchTerm, selectedCategories, selectedColors, sortBy]);
+  }, [products, searchTerm, selectedFilter, sortBy]);
 
   if (!Array.isArray(products)) {
     return (

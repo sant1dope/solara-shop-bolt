@@ -1,12 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: { unoptimized: true },
+  experimental: {
+    serverActions: true
+  },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       crypto: require.resolve('crypto-browserify'),
       stream: require.resolve('stream-browserify'),
-      util: require.resolve('util/'),
       buffer: require.resolve('buffer/'),
       process: require.resolve('process/browser'),
       net: require.resolve('net-browserify'),

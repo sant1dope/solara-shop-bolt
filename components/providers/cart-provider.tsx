@@ -97,15 +97,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       if (existingItem) {
         toast({
-          title: 'Already in cart',
-          description: 'This item is already in your cart',
+          title: 'Already in bag',
+          description: 'This item is already in your bag',
         });
         return currentItems;
       }
 
       toast({
-        title: 'Added to cart',
-        description: `${product.name} has been added to your cart`,
+        title: 'Added to bag',
+        description: `${product.name} has been added to your bag`,
       });
 
       return [...currentItems, { ...product, quantity: 1 }];
@@ -117,8 +117,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       currentItems.filter((item) => item.id !== productId)
     );
     toast({
-      title: 'Removed from cart',
-      description: 'Item has been removed from your cart',
+      title: 'Removed from bag',
+      description: 'Item has been removed from your bag',
     });
   };
 
@@ -134,8 +134,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
     saveCartData([]); // Explicitly clear stored data
     toast({
-      title: 'Cart cleared',
-      description: 'All items have been removed from your cart',
+      title: 'Bag cleared',
+      description: 'All items have been removed from your bag',
     });
   };
 

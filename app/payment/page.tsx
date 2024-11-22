@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/components/providers/cart-provider';
 import { SimpleLoading } from '@/components/ui/simple-loading';
+import { getShippingFee, formatPrice } from '@/lib/utils';
 import { 
   CreditCard, 
   Wallet, 
@@ -38,7 +39,7 @@ const paymentMethods = [
     image: '/images/gcash.png',
     accountNumber: '09123456789',
     accountName: 'John Doe',
-    qrCode: '/images/gcash-qr-placeholder.png'
+    qrCode: '/images/qr/gcash_qr.JPG'
   },
   { 
     id: 'maya',
@@ -46,7 +47,7 @@ const paymentMethods = [
     image: '/images/maya.png',
     accountNumber: '09123456789',
     accountName: 'John Doe',
-    qrCode: '/images/maya-qr-placeholder.png'
+    qrCode: '/images/qr/maya_qr.JPG'
   }
 ];
 
@@ -66,6 +67,8 @@ export default function PaymentPage() {
   const { toast } = useToast();
 
   const progress = ((currentStep + 1) / steps.length) * 100;
+  const shippingFee = getShippingFee(total);
+  const finalTotal = total + shippingFee;
 
   const handleNext = () => {
     if (currentStep === 0 && !selectedMethod) {
@@ -139,7 +142,7 @@ export default function PaymentPage() {
         address: formData.address,
         contactNumber: formData.contactNumber,
         paymentMethod: selectedMethod,
-        amount: total,
+        amount: finalTotal,
         items: items.map(item => ({
           id: item.id,
           name: item.name,
@@ -187,7 +190,7 @@ export default function PaymentPage() {
       });
 
       // Use replace to prevent back navigation to payment page
-      await router.push('/thank-you');
+      router.push('/thank-you');
     } catch (error) {
       console.error('Payment error:', error);
       toast({
@@ -217,7 +220,7 @@ export default function PaymentPage() {
   const selectedPaymentMethod = paymentMethods.find(m => m.id === selectedMethod);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-2xl mt-2">
       <div className="mb-8">
         <Progress value={progress} className="w-full" />
         <div className="flex justify-between mt-4">
@@ -243,8 +246,13 @@ export default function PaymentPage() {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Select Payment Method</h2>
             <div className="text-center mb-8">
-              <h3 className="text-lg text-muted-foreground">Amount to Pay</h3>
-              <p className="text-4xl font-bold">₱{total.toFixed(2)}</p>
+              <h3 className="text-lg font-medium text-muted-foreground">Amount to Pay</h3>
+              <p className="text-4xl font-bold">{formatPrice(finalTotal)}</p>
+              {shippingFee > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Includes shipping fee of {formatPrice(shippingFee)}
+                </p>
+              )}
             </div>
             <RadioGroup
               value={selectedMethod}
@@ -355,9 +363,19 @@ export default function PaymentPage() {
                 {items.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span>{item.name} × {item.quantity}</span>
-                    <span>₱{(item.price * item.quantity).toFixed(2)}</span>
+                    <span>{formatPrice(item.price * item.quantity)}</span>
                   </div>
                 ))}
+                <div className="border-t pt-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(total)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Shipping</span>
+                    <span>{shippingFee === 0 ? 'Free' : formatPrice(shippingFee)}</span>
+                  </div>
+                </div>
               </div>
               <div className="border-t pt-4">
                 <div className="flex justify-between">
@@ -381,7 +399,7 @@ export default function PaymentPage() {
                 <div className="border-t mt-4 pt-4">
                   <div className="flex justify-between font-bold">
                     <span>Total Amount</span>
-                    <span>₱{total.toFixed(2)}</span>
+                    <span>{formatPrice(finalTotal)}</span>
                   </div>
                 </div>
               </div>
@@ -398,8 +416,9 @@ export default function PaymentPage() {
                   <h3 className="font-semibold">{selectedPaymentMethod.name} Details</h3>
                   <p className="text-muted-foreground">Account Name: {selectedPaymentMethod.accountName}</p>
                   <p className="text-muted-foreground">Account Number: {selectedPaymentMethod.accountNumber}</p>
+                  <p className="font-medium mt-2">Amount to Pay: {formatPrice(finalTotal)}</p>
                 </div>
-                <div className="relative w-48 h-48 mx-auto mb-4">
+                <div className="relative w-[600px] h-[600px] mx-auto mb-4">
                   <Image
                     src={selectedPaymentMethod.qrCode}
                     alt={`${selectedPaymentMethod.name} QR Code`}

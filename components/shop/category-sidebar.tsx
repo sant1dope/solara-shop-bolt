@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Search, Tag, Palette } from 'lucide-react';
+import { Search, Tag, Palette, Package, XCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Product } from '@/types/product';
 
 interface CategoryCount {
@@ -14,23 +16,18 @@ interface CategoryCount {
   count: number;
 }
 
-interface ColorCount {
-  id: string;
-  label: string;
-  count: number;
-}
-
 interface CategorySidebarProps {
   onSearch: (term: string) => void;
-  onFilterChange: (categories: string[], colors: string[]) => void;
+  onFilterChange: (selectedFilter: string | null) => void;
+  isMobile: boolean;
 }
 
-export default function CategorySidebar({ onSearch, onFilterChange }: CategorySidebarProps) {
+export default function CategorySidebar({ onSearch, onFilterChange, isMobile }: CategorySidebarProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryCount[]>([]);
-  const [colors, setColors] = useState<ColorCount[]>([]);
+  const [productTypes, setProductTypes] = useState<CategoryCount[]>([]);
+  const [colors, setColors] = useState<CategoryCount[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,40 +40,42 @@ export default function CategorySidebar({ onSearch, onFilterChange }: CategorySi
 
         // Process categories
         const categoryMap = new Map<string, number>();
+        const productTypeMap = new Map<string, number>();
+        const colorMap = new Map<string, number>();
+
         products.forEach(product => {
+          // Process categories
           if (product.category) {
             const category = product.category.toLowerCase();
             categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
           }
-        });
 
-        const processedCategories = Array.from(categoryMap.entries())
-          .map(([id, count]) => ({
-            id,
-            label: id.charAt(0).toUpperCase() + id.slice(1),
-            count
-          }))
-          .sort((a, b) => b.count - a.count);
+          // Process product types
+          if (product.productType) {
+            const type = product.productType.toLowerCase();
+            productTypeMap.set(type, (productTypeMap.get(type) || 0) + 1);
+          }
 
-        // Process colors
-        const colorMap = new Map<string, number>();
-        products.forEach(product => {
+          // Process colors
           if (product.color) {
             const color = product.color.toLowerCase();
             colorMap.set(color, (colorMap.get(color) || 0) + 1);
           }
         });
 
-        const processedColors = Array.from(colorMap.entries())
-          .map(([id, count]) => ({
-            id,
-            label: id.charAt(0).toUpperCase() + id.slice(1),
-            count
-          }))
-          .sort((a, b) => b.count - a.count);
+        // Convert maps to arrays and sort
+        const processCategories = (map: Map<string, number>) => 
+          Array.from(map.entries())
+            .map(([id, count]) => ({
+              id,
+              label: id.charAt(0).toUpperCase() + id.slice(1),
+              count
+            }))
+            .sort((a, b) => b.count - a.count);
 
-        setCategories(processedCategories);
-        setColors(processedColors);
+        setCategories(processCategories(categoryMap));
+        setProductTypes(processCategories(productTypeMap));
+        setColors(processCategories(colorMap));
       } catch (error) {
         console.error('Error fetching filter data:', error);
       } finally {
@@ -92,24 +91,55 @@ export default function CategorySidebar({ onSearch, onFilterChange }: CategorySi
     onSearch(value);
   };
 
-  const handleCategoryChange = (categoryId: string, checked: boolean) => {
-    const newCategories = checked
-      ? [...selectedCategories, categoryId]
-      : selectedCategories.filter((id) => id !== categoryId);
-    setSelectedCategories(newCategories);
-    onFilterChange(newCategories, selectedColors);
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch(searchTerm);
+    }
   };
 
-  const handleColorChange = (colorId: string, checked: boolean) => {
-    const newColors = checked
-      ? [...selectedColors, colorId]
-      : selectedColors.filter((id) => id !== colorId);
-    setSelectedColors(newColors);
-    onFilterChange(selectedCategories, newColors);
+  const handleFilterChange = (value: string) => {
+    const newFilter = value === "" ? null : value;
+    setSelectedFilter(newFilter);
+    onFilterChange(newFilter);
   };
+
+  const handleReset = () => {
+    setSelectedFilter(null);
+    onFilterChange(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            className="pl-8"
+            disabled
+          />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-6 w-24" />
+              <div className="space-y-2">
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="flex items-center space-x-2">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isMobile ? 'pb-20 mt-6' : ''}`}>
       <div>
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -117,109 +147,117 @@ export default function CategorySidebar({ onSearch, onFilterChange }: CategorySi
             placeholder="Search products..."
             className="pl-8"
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
         </div>
       </div>
 
-      {loading ? (
-        <div className="space-y-6">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Tag className="h-4 w-4" />
-              <Skeleton className="h-6 w-24" />
-            </div>
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center space-x-2 mb-3">
-                <Skeleton className="h-4 w-4" />
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-4 w-8" />
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Filters</h3>
+        {selectedFilter && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+          >
+            <XCircle className="h-4 w-4 mr-1" />
+            Reset
+          </Button>
+        )}
+      </div>
+
+      {categories.length > 0 && (
+        <div>
+          <h3 className="mb-3 text-lg font-semibold flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Categories
+          </h3>
+          <RadioGroup
+            value={selectedFilter || ""}
+            onValueChange={handleFilterChange}
+            className="space-y-1.5"
+          >
+            {categories.map((category) => (
+              <div key={category.id} className="flex items-center space-x-2">
+                <RadioGroupItem value={category.id} id={`category-${category.id}`} />
+                <Label
+                  htmlFor={`category-${category.id}`}
+                  className="flex-1 text-sm font-medium leading-none cursor-pointer"
+                >
+                  {category.label}
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({category.count})
+                  </span>
+                </Label>
               </div>
             ))}
-          </div>
-
-          <Separator />
-
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Palette className="h-4 w-4" />
-              <Skeleton className="h-6 w-16" />
-            </div>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center space-x-2 mb-3">
-                <Skeleton className="h-4 w-4" />
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-4 w-8" />
-              </div>
-            ))}
-          </div>
+          </RadioGroup>
         </div>
-      ) : (
-        <>
-          {categories.length > 0 && (
-            <div>
-              <h3 className="mb-4 text-lg font-semibold flex items-center gap-2">
-                <Tag className="h-4 w-4" />
-                Categories
-              </h3>
-              <div className="space-y-3">
-                {categories.map((category) => (
-                  <div key={category.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={category.id}
-                      checked={selectedCategories.includes(category.id)}
-                      onCheckedChange={(checked) => 
-                        handleCategoryChange(category.id, checked as boolean)
-                      }
-                    />
-                    <label
-                      htmlFor={category.id}
-                      className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {category.label}
-                    </label>
-                    <span className="text-sm text-muted-foreground">
-                      ({category.count})
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      )}
 
-          {colors.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="mb-4 text-lg font-semibold flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
-                  Colors
-                </h3>
-                <div className="space-y-3">
-                  {colors.map((color) => (
-                    <div key={color.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`color-${color.id}`}
-                        checked={selectedColors.includes(color.id)}
-                        onCheckedChange={(checked) => 
-                          handleColorChange(color.id, checked as boolean)
-                        }
-                      />
-                      <label
-                        htmlFor={`color-${color.id}`}
-                        className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {color.label}
-                      </label>
-                      <span className="text-sm text-muted-foreground">
-                        ({color.count})
-                      </span>
-                    </div>
-                  ))}
+      {productTypes.length > 0 && (
+        <>
+          <Separator className="my-4" />
+          <div>
+            <h3 className="mb-3 text-lg font-semibold flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Product Types
+            </h3>
+            <RadioGroup
+              value={selectedFilter || ""}
+              onValueChange={handleFilterChange}
+              className="space-y-1.5"
+            >
+              {productTypes.map((type) => (
+                <div key={type.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={type.id} id={`type-${type.id}`} />
+                  <Label
+                    htmlFor={`type-${type.id}`}
+                    className="flex-1 text-sm font-medium leading-none cursor-pointer"
+                  >
+                    {type.label}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({type.count})
+                    </span>
+                  </Label>
                 </div>
-              </div>
-            </>
-          )}
+              ))}
+            </RadioGroup>
+          </div>
+        </>
+      )}
+
+      {colors.length > 0 && (
+        <>
+          <Separator className="my-4" />
+          <div>
+            <h3 className="mb-3 text-lg font-semibold flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Colors
+            </h3>
+            <RadioGroup
+              value={selectedFilter || ""}
+              onValueChange={handleFilterChange}
+              className="space-y-1.5"
+            >
+              {colors.map((color) => (
+                <div key={color.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={color.id} id={`color-${color.id}`} />
+                  <Label
+                    htmlFor={`color-${color.id}`}
+                    className="flex-1 text-sm font-medium leading-none cursor-pointer"
+                  >
+                    {color.label}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({color.count})
+                    </span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
         </>
       )}
     </div>

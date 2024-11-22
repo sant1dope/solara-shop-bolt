@@ -2,25 +2,40 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronRight, Star, ChevronLeft, ChevronRightIcon } from 'lucide-react';
+import { ChevronRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import RelatedProducts from '@/components/shop/related-products';
 import { useCart } from '@/components/providers/cart-provider';
 import { Product } from '@/types/product';
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+
+const BADGE_VARIANTS: Record<string, {
+  variant: "default" | "destructive" | "outline" | "secondary",
+  className: string
+}> = {
+  'sold-out': {
+    variant: "destructive",
+    className: "bg-red-500"
+  },
+  'most-loved': {
+    variant: "secondary",
+    className: "bg-pink-500 text-white"
+  },
+  'new-arrival': {
+    variant: "secondary",
+    className: "bg-emerald-500 text-white"
+  },
+  'sale': {
+    variant: "secondary",
+    className: "bg-amber-500 text-white"
+  },
+  'bundle': {
+    variant: "secondary",
+    className: "bg-purple-500 text-white"
+  }
+};
 
 interface ProductDetailsProps {
   product: Product;
@@ -35,6 +50,26 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     ? [product.image, ...product.images] 
     : [product.image];
 
+  // Find sale badge if it exists
+  const saleBadge = product.badges?.find(badge => badge.type === 'sale');
+  const discount = saleBadge?.discount || 0;
+
+  // Calculate discounted price if there's a discount
+  const originalPrice = product.price;
+  const discountedPrice = discount > 0 
+    ? originalPrice * (1 - discount / 100)
+    : originalPrice;
+
+  // Split images into rows of 7
+  const chunkedImages = images.reduce((resultArray: string[][], item, index) => { 
+    const chunkIndex = Math.floor(index / 7);
+    if (!resultArray[chunkIndex]) {
+      resultArray[chunkIndex] = [];
+    }
+    resultArray[chunkIndex].push(item);
+    return resultArray;
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-4 flex items-center text-sm text-muted-foreground">
@@ -47,82 +82,68 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         <div className="space-y-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <div className="relative aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer">
-                <Image
-                  src={images[currentImageIndex]}
-                  alt={product.name}
-                  fill
-                  className="object-cover transition-transform hover:scale-105"
-                  priority
-                />
-                {product.soldOut && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute right-2 top-2"
-                  >
-                    Sold Out
-                  </Badge>
-                )}
+          <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+            <Image
+              src={images[currentImageIndex]}
+              alt={product.name}
+              fill
+              className="object-cover transition-transform hover:scale-105"
+              priority
+            />
+            {product.badges && product.badges.length > 0 && (
+              <div className="absolute top-2 right-2 flex flex-col gap-1">
+                {product.badges.map((badge) => {
+                  const badgeStyle = BADGE_VARIANTS[badge.type] || BADGE_VARIANTS['new-arrival'];
+                  return (
+                    <Badge
+                      key={badge.type}
+                      variant={badgeStyle.variant}
+                      className={badgeStyle.className}
+                    >
+                      {badge.label}
+                    </Badge>
+                  );
+                })}
               </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <div className="relative py-6">
-                <Carousel className="w-full">
-                  <CarouselContent>
-                    {images.map((image, index) => (
-                      <CarouselItem key={index}>
-                        <div className="relative aspect-square">
-                          <Image
-                            src={image}
-                            alt={`${product.name} ${index + 1}`}
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <div className="absolute top-1/2 -left-12 transform -translate-y-1/2">
-                    <CarouselPrevious className="relative" />
-                  </div>
-                  <div className="absolute top-1/2 -right-12 transform -translate-y-1/2">
-                    <CarouselNext className="relative" />
-                  </div>
-                </Carousel>
-              </div>
-            </DialogContent>
-          </Dialog>
+            )}
+          </div>
 
           {images.length > 1 && (
-            <div className="grid grid-cols-4 gap-2">
-              {images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentImageIndex(index)}
-                  className={`relative aspect-square overflow-hidden rounded-md ${
-                    currentImageIndex === index 
-                      ? 'ring-2 ring-primary' 
-                      : 'ring-1 ring-gray-200'
-                  }`}
-                >
-                  <Image
-                    src={image}
-                    alt={`${product.name} ${index + 1}`}
-                    fill
-                    className="object-cover"
-                  />
-                </button>
+            <div className="space-y-2">
+              {chunkedImages.map((row, rowIndex) => (
+                <div key={rowIndex} className="flex gap-2 justify-start">
+                  {row.map((image, index) => {
+                    const absoluteIndex = rowIndex * 7 + index;
+                    return (
+                      <button
+                        key={absoluteIndex}
+                        onClick={() => setCurrentImageIndex(absoluteIndex)}
+                        className={`relative aspect-square w-[calc((100%-48px)/7)] flex-none overflow-hidden rounded-md ${
+                          currentImageIndex === absoluteIndex 
+                            ? 'ring-2 ring-primary' 
+                            : 'ring-1 ring-gray-200'
+                        }`}
+                      >
+                        <Image
+                          src={image}
+                          alt={`${product.name} ${absoluteIndex + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
               ))}
             </div>
           )}
         </div>
 
         <div className="space-y-6">
-          <div>
+          <div className="space-y-2">
             <h1 className="text-3xl font-bold">{product.name}</h1>
-            <div className="mt-4 flex items-center space-x-2">
+            <p className="text-sm text-muted-foreground">{product.productType}</p>
+            <div className="flex items-center space-x-2">
               <div className="flex">
                 {Array.from({ length: product.rating }).map((_, i) => (
                   <Star
@@ -137,8 +158,21 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
 
-          <div className="text-2xl font-bold">
-            ${product.price.toFixed(2)}
+          <div className="space-y-1">
+            {discount > 0 ? (
+              <>
+                <div className="text-2xl font-bold text-primary">
+                  ₱{discountedPrice.toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground line-through">
+                  ₱{originalPrice.toFixed(2)}
+                </div>
+              </>
+            ) : (
+              <div className="text-2xl font-bold">
+                ₱{originalPrice.toFixed(2)}
+              </div>
+            )}
           </div>
 
           <div className="prose max-w-none">
@@ -146,7 +180,10 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           </div>
 
           <Button
-            onClick={() => addItem(product)}
+            onClick={() => addItem({
+              ...product,
+              price: discountedPrice
+            })}
             size="lg"
             className="w-full"
             disabled={product.soldOut}
@@ -157,7 +194,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
       </div>
 
       <div className="mt-16">
-        <h2 className="mb-8 text-2xl font-bold">Related Products</h2>
+        <h2 className="mb-8 text-2xl font-bold">You might also like</h2>
         <RelatedProducts currentProductId={product.id} />
       </div>
     </div>
