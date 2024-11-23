@@ -12,8 +12,9 @@ import { Mail, MoreHorizontal, FileText, ExternalLink } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
 
-export type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+export type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Paid";
 
 export type Order = {
   orderId: string;
@@ -34,42 +35,89 @@ export type Order = {
   receiptUrl: string;
 };
 
-async function sendInvoice(orderId: string) {
-  try {
-    const response = await fetch('/api/admin/orders/send-invoice', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ orderId }),
-    });
+// Move these functions inside the ActionCell component
+function ActionCell({ row }: { row: any }) {
+  const order = row.original;
 
-    if (!response.ok) throw new Error('Failed to send invoice');
-    
-    alert('Invoice sent successfully!');
-  } catch (error) {
-    console.error('Error sending invoice:', error);
-    alert('Failed to send invoice');
+  async function sendInvoice(orderId: string) {
+    try {
+      const response = await fetch('/api/admin/orders/send-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send invoice');
+      
+      toast({
+        title: "Success",
+        description: "Invoice sent successfully!",
+      });
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send invoice",
+        variant: "destructive",
+      });
+    }
   }
-}
 
-async function sendThankYouEmail(orderId: string) {
-  try {
-    const response = await fetch('/api/admin/orders/send-thank-you', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ orderId }),
-    });
+  async function sendThankYouEmail(orderId: string) {
+    try {
+      const response = await fetch('/api/admin/orders/send-thank-you', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId }),
+      });
 
-    if (!response.ok) throw new Error('Failed to send thank you email');
-    
-    alert('Thank you email sent successfully!');
-  } catch (error) {
-    console.error('Error sending thank you email:', error);
-    alert('Failed to send thank you email');
+      if (!response.ok) throw new Error('Failed to send thank you email');
+      
+      toast({
+        title: "Success",
+        description: "Thank you email sent successfully!",
+      });
+    } catch (error) {
+      console.error('Error sending thank you email:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send thank you email",
+        variant: "destructive",
+      });
+    }
   }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={() => sendInvoice(order.orderId)}
+          className="cursor-pointer"
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          Send Invoice
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => sendThankYouEmail(order.orderId)}
+          className="cursor-pointer"
+        >
+          <Mail className="mr-2 h-4 w-4" />
+          Send Thank You
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export const columns: ColumnDef<Order>[] = [
@@ -126,6 +174,8 @@ export const columns: ColumnDef<Order>[] = [
               ? "bg-green-500"
               : status === "Processing"
               ? "bg-blue-500"
+              : status === "Paid"
+              ? "bg-emerald-500"
               : status === "Shipped"
               ? "bg-purple-500"
               : status === "Cancelled"
@@ -140,36 +190,6 @@ export const columns: ColumnDef<Order>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const order = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => sendInvoice(order.orderId)}
-              className="cursor-pointer"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Send Invoice
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => sendThankYouEmail(order.orderId)}
-              className="cursor-pointer"
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Send Thank You
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ActionCell
   },
 ];

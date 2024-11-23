@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { isAdmin } from '@/lib/auth';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -39,17 +38,21 @@ async function initializeGoogleSheet() {
   }
 }
 
-export async function POST(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const { userId } = auth();
-    if (!userId || !isAdmin()) {
+    if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { orderId, status } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
 
-    if (!orderId || !status) {
-      return new NextResponse('Missing required fields', { status: 400 });
+    if (!email) {
+      return new NextResponse('Email is required', { status: 400 });
     }
 
     await initializeGoogleSheet();
@@ -62,18 +65,32 @@ export async function POST(request: Request) {
     await sheet.loadHeaderRow();
     const rows = await sheet.getRows();
     
-    const orderRow = rows.find(row => row.get('orderId') === orderId);
+    const orderRow = rows.find(row => 
+      row.get('orderId') === params.id && 
+      row.get('email').toLowerCase() === email.toLowerCase()
+    );
     
     if (!orderRow) {
       return new NextResponse('Order not found', { status: 404 });
     }
 
-    orderRow.set('status', status);
-    await orderRow.save();
+    const order = {
+      orderId: orderRow.get('orderId'),
+      date: orderRow.get('date'),
+      customerName: orderRow.get('customerName'),
+      email: orderRow.get('email'),
+      contactNumber: orderRow.get('contactNumber'),
+      address: orderRow.get('address'),
+      paymentMethod: orderRow.get('paymentMethod'),
+      totalAmount: parseFloat(orderRow.get('totalAmount')),
+      items: JSON.parse(orderRow.get('items') || '[]'),
+      status: orderRow.get('status'),
+      receiptUrl: orderRow.get('receiptUrl'),
+    };
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(order);
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error('Error fetching order:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

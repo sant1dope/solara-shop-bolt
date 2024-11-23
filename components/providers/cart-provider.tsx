@@ -10,6 +10,7 @@ import {
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
 import { getCookie, setCookie } from 'cookies-next';
+import { useUser } from '@clerk/nextjs';
 
 interface CartItem extends Product {
   quantity: number;
@@ -76,20 +77,59 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
+  const { user, isLoaded } = useUser();
 
   // Load cart data on mount
   useEffect(() => {
-    const savedItems = loadCartData();
-    setItems(savedItems);
-    setIsInitialized(true);
-  }, []);
+    async function loadUserCart() {
+      if (user) {
+        try {
+          const response = await fetch(`/api/user/profile?userId=${user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.cartItems?.length > 0) {
+              setItems(data.cartItems);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error loading user cart:', error);
+        }
+      }
+      
+      // Fall back to local storage if no user or error loading user cart
+      const savedItems = loadCartData();
+      setItems(savedItems);
+    }
+
+    if (isLoaded) {
+      loadUserCart();
+      setIsInitialized(true);
+    }
+  }, [user, isLoaded]);
 
   // Save cart data whenever it changes
   useEffect(() => {
-    if (isInitialized) {
-      saveCartData(items);
+    if (!isInitialized) return;
+
+    // Save to local storage/cookies
+    saveCartData(items);
+
+    // If user is logged in, save to server
+    if (user) {
+      fetch('/api/user/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cartItems: items,
+        }),
+      }).catch(error => {
+        console.error('Error saving cart to server:', error);
+      });
     }
-  }, [items, isInitialized]);
+  }, [items, isInitialized, user]);
 
   const addItem = (product: Product) => {
     setItems((currentItems) => {

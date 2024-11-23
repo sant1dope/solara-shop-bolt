@@ -4,7 +4,8 @@ import {
   Truck,
   RotateCcw,
   CreditCard,
-  Contact
+  Contact,
+  MessageSquare
 } from 'lucide-react';
 
 const helpLinks = [
@@ -32,6 +33,11 @@ const helpLinks = [
     href: '/help/contact',
     label: 'Contact Us',
     icon: Contact
+  },
+  {
+    href: '/feedback',
+    label: 'Give Feedback',
+    icon: MessageSquare
   }
 ];
 

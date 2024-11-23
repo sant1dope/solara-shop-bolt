@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { isAdmin } from '@/lib/auth';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -42,38 +41,46 @@ async function initializeGoogleSheet() {
 export async function POST(request: Request) {
   try {
     const { userId } = auth();
-    if (!userId || !isAdmin()) {
+    if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { orderId, status } = await request.json();
-
-    if (!orderId || !status) {
-      return new NextResponse('Missing required fields', { status: 400 });
+    const { fullName, address, contactNumber } = await request.json();
+    if (!fullName || !address || !contactNumber) {
+      return new NextResponse('All fields are required', { status: 400 });
     }
 
     await initializeGoogleSheet();
 
-    const sheet = doc.sheetsByTitle['Orders'];
+    let sheet = doc.sheetsByTitle['Users'];
     if (!sheet) {
-      throw new Error('Orders sheet not found');
+      sheet = await doc.addSheet({ 
+        title: 'Users', 
+        headerValues: ['userId', 'fullName', 'address', 'contactNumber'] 
+      });
     }
 
     await sheet.loadHeaderRow();
     const rows = await sheet.getRows();
-    
-    const orderRow = rows.find(row => row.get('orderId') === orderId);
-    
-    if (!orderRow) {
-      return new NextResponse('Order not found', { status: 404 });
-    }
+    const userRow = rows.find(row => row.get('userId') === userId);
 
-    orderRow.set('status', status);
-    await orderRow.save();
+    if (userRow) {
+      userRow.set('fullName', fullName);
+      userRow.set('address', address);
+      userRow.set('contactNumber', contactNumber);
+      await userRow.save();
+    } else {
+      await sheet.addRow({ 
+        userId, 
+        fullName, 
+        address, 
+        contactNumber 
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error('Error updating profile:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

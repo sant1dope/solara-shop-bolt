@@ -17,7 +17,7 @@ export default function OrderStatusPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/orders/status?orderId=${orderId}&email=${email}`);
+      const response = await fetch(`/api/orders/status?orderId=${orderId}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -54,15 +54,6 @@ export default function OrderStatusPage() {
             required
           />
         </div>
-        <div>
-          <Input
-            type="email"
-            placeholder="Email address*"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? 'Checking...' : 'Check Status'}
         </Button>
@@ -72,6 +63,9 @@ export default function OrderStatusPage() {
         <div className="mt-8 p-6 border rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Order Details</h2>
           <div className="space-y-2">
+            <p>
+              <span className="font-medium">Customer Name:</span> {orderStatus.customerName}
+            </p>
             <p>
               <span className="font-medium">Status:</span> {orderStatus.status}
             </p>

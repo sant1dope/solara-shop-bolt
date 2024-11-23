@@ -39,7 +39,7 @@ async function initializeGoogleSheet() {
   }
 }
 
-async function getOrderStatus(orderId: string, email: string) {
+async function getOrderStatus(orderId: string) {
   await initializeGoogleSheet();
 
   const sheet = doc.sheetsByTitle['Orders'];
@@ -51,7 +51,7 @@ async function getOrderStatus(orderId: string, email: string) {
   const rows = await sheet.getRows();
 
   const order = rows.find(
-    row => row.get('orderId') === orderId && row.get('email').toLowerCase() === email.toLowerCase()
+    row => row.get('orderId') === orderId
   );
 
   if (!order) {
@@ -60,6 +60,7 @@ async function getOrderStatus(orderId: string, email: string) {
 
   return {
     orderId: order.get('orderId'),
+    customerName: order.get('customerName'),
     status: order.get('status'),
     date: order.get('date'),
     totalAmount: order.get('totalAmount'),
@@ -71,16 +72,15 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
-    const email = searchParams.get('email');
 
-    if (!orderId || !email) {
+    if (!orderId) {
       return NextResponse.json(
-        { error: 'Order ID and email are required' },
+        { error: 'Order ID required' },
         { status: 400 }
       );
     }
 
-    const orderStatus = await getOrderStatus(orderId, email);
+    const orderStatus = await getOrderStatus(orderId);
     return NextResponse.json(orderStatus);
   } catch (error) {
     console.error('Error fetching order status:', error);

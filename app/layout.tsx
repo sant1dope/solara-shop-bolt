@@ -1,17 +1,43 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from '@/components/ui/toaster';
-import Header from '@/components/layout/header';
-import { CartProvider } from '@/components/providers/cart-provider';
-import Footer from '@/components/layout/footer/footer';
+import { ClerkProvider } from '@clerk/nextjs';
+import { RootLayoutContent } from '@/components/layout/root-layout-content';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Solara Shop',
-  description: 'Discover our unique collection of fashion and accessories',
+  description: 'Personalized Creations for Every Style.',
+  icons: {
+    icon: [
+      {
+        url: '/favicon.ico',
+        sizes: 'any',
+      },
+      {
+        url: '/icon.png',
+        type: 'image/png',
+        sizes: '32x32',
+      },
+      {
+        url: '/icon-192.png',
+        type: 'image/png',
+        sizes: '192x192',
+      },
+      {
+        url: '/icon-512.png',
+        type: 'image/png',
+        sizes: '512x512',
+      },
+    ],
+    apple: {
+      url: '/apple-icon.png',
+      type: 'image/png',
+      sizes: '180x180',
+    },
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -20,19 +46,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <CartProvider>
-            <div className="min-h-screen bg-background">
-              <Header />
-              <main>{children}</main>
-              <Toaster />
-              <Footer />
-            </div>
-          </CartProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body className={inter.className}>
+          <RootLayoutContent>{children}</RootLayoutContent>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

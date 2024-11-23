@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { isAdmin } from '@/lib/auth';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
@@ -46,7 +47,7 @@ export async function GET(
 ) {
   try {
     const { userId } = auth();
-    if (!userId) {
+    if (!userId || !isAdmin()) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 

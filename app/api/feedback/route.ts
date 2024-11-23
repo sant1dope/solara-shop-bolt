@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { isAdmin } from '@/lib/auth';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -41,39 +39,45 @@ async function initializeGoogleSheet() {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = auth();
-    if (!userId || !isAdmin()) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const { message, email, errorDetails, userId } = await request.json();
 
-    const { orderId, status } = await request.json();
-
-    if (!orderId || !status) {
-      return new NextResponse('Missing required fields', { status: 400 });
+    if (!message) {
+      return new NextResponse('Message is required', { status: 400 });
     }
 
     await initializeGoogleSheet();
 
-    const sheet = doc.sheetsByTitle['Orders'];
+    // Get or create Feedback sheet
+    let sheet = doc.sheetsByTitle['Feedback'];
     if (!sheet) {
-      throw new Error('Orders sheet not found');
+      sheet = await doc.addSheet({
+        title: 'Feedback',
+        headerValues: [
+          'date',
+          'message',
+          'email',
+          'userId',
+          'errorDetails',
+          'status',
+          'notes'
+        ]
+      });
     }
 
-    await sheet.loadHeaderRow();
-    const rows = await sheet.getRows();
-    
-    const orderRow = rows.find(row => row.get('orderId') === orderId);
-    
-    if (!orderRow) {
-      return new NextResponse('Order not found', { status: 404 });
-    }
-
-    orderRow.set('status', status);
-    await orderRow.save();
+    // Add feedback to sheet
+    await sheet.addRow({
+      date: new Date().toISOString(),
+      message,
+      email: email || 'Anonymous',
+      userId: userId || 'Not logged in',
+      errorDetails: errorDetails || 'No error details',
+      status: 'New',
+      notes: ''
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error('Error submitting feedback:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

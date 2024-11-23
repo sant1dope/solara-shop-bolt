@@ -17,7 +17,7 @@ import {
               <Mail className="h-6 w-6 text-primary" />
               <div>
                 <h3 className="font-semibold mb-1">Email</h3>
-                <p className="text-muted-foreground">support@solara.com</p>
+                <p className="text-muted-foreground">inquireatsolara@gmail.com</p>
                 <p className="text-sm text-muted-foreground">
                   We aim to respond within 24 hours
                 </p>
@@ -39,7 +39,7 @@ import {
               <Phone className="h-6 w-6 text-primary" />
               <div>
                 <h3 className="font-semibold mb-1">Phone</h3>
-                <p className="text-muted-foreground">+63 (2) 8123 4567</p>
+                <p className="text-muted-foreground">(0929) 594 6140</p>
                 <p className="text-sm text-muted-foreground">
                   Monday to Friday, 9:00 AM - 6:00 PM
                 </p>
@@ -53,9 +53,9 @@ import {
               <div>
                 <h3 className="font-semibold mb-1">Location</h3>
                 <p className="text-muted-foreground">
-                  123 Fashion Street, Makati City
+                  Batangas City
                   <br />
-                  Metro Manila, Philippines
+                  Batangas, Philippines
                 </p>
               </div>
             </div>

@@ -1,3 +1,5 @@
+export type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Paid";
+
 export interface OrderItem {
   id: string;
   name: string;
@@ -5,13 +7,16 @@ export interface OrderItem {
   quantity: number;
 }
 
-export interface OrderData {
+export interface Order {
+  orderId: string;
+  date: string;
   customerName: string;
   email: string;
-  address: string;
   contactNumber: string;
+  address: string;
   items: OrderItem[];
-  total: number;
+  totalAmount: number;
   paymentMethod: string;
-  updatePreference: 'messenger' | 'email' | 'viber';
+  status: OrderStatus;
+  receiptUrl?: string;
 }

@@ -4,6 +4,7 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 import nodemailer from 'nodemailer';
 import Handlebars from 'handlebars';
+import { isAdmin } from '@/lib/auth';
 
 // ... (same initialization code as update-status)
 
@@ -87,7 +88,7 @@ const thankYouTemplate = `
 export async function POST(request: Request) {
   try {
     const { userId } = auth();
-    if (!userId) {
+    if (!userId || !isAdmin()) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 

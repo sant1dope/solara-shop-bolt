@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/components/providers/cart-provider';
 import { SimpleLoading } from '@/components/ui/simple-loading';
 import { getShippingFee, formatPrice } from '@/lib/utils';
+import { useUser } from '@clerk/nextjs';
 import { 
   CreditCard, 
   Wallet, 
@@ -22,7 +23,8 @@ import {
   Upload, 
   ArrowRight, 
   ArrowLeft,
-  CheckCircle2
+  CheckCircle2,
+  ArrowDown
 } from 'lucide-react';
 
 const steps = [
@@ -48,8 +50,46 @@ const paymentMethods = [
     accountNumber: '09123456789',
     accountName: 'John Doe',
     qrCode: '/images/qr/maya_qr.JPG'
-  }
+  },
+  { 
+    id: 'grabpay',
+    name: 'GrabPay',
+    image: '/images/grabpay.png',
+    accountNumber: '09123456789',
+    accountName: 'John Doe',
+    qrCode: '/images/qr/grabpay_qr.jpg'
+  },
+  { 
+    id: 'bpi',
+    name: 'BPI',
+    image: '/images/bpi.png',
+    accountNumber: '09123456789',
+    accountName: 'John Doe',
+    qrCode: '/images/qr/bpi_qr.PNG'
+  },
+  { 
+    id: 'seabank',
+    name: 'SeaBank',
+    image: '/images/seabank.svg',
+    accountNumber: '09123456789',
+    accountName: 'John Doe',
+    qrCode: '/images/qr/seabank_qr.PNG'
+  },
+  { 
+    id: 'landbank',
+    name: 'LandBank',
+    image: '/images/landbank.png',
+    accountNumber: '09123456789',
+    accountName: 'John Doe',
+    qrCode: '/images/qr/landbank_qr.JPG'
+  },
 ];
+
+interface UserData {
+  fullName: string;
+  address: string;
+  contactNumber: string;
+}
 
 export default function PaymentPage() {
   const { items, total, clearCart } = useCart();
@@ -63,12 +103,44 @@ export default function PaymentPage() {
     receipt: null as File | null
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
 
   const progress = ((currentStep + 1) / steps.length) * 100;
   const shippingFee = getShippingFee(total);
   const finalTotal = total + shippingFee;
+
+  // Fetch user data when component mounts
+  useEffect(() => {
+    async function fetchUserData() {
+      if (!user) {
+        setIsLoadingUserData(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/user/profile?userId=${user.id}`);
+        if (response.ok) {
+          const userData: UserData = await response.json();
+          setFormData(prev => ({
+            ...prev,
+            name: userData.fullName,
+            email: user.emailAddresses[0]?.emailAddress || '',
+            address: userData.address,
+            contactNumber: userData.contactNumber
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoadingUserData(false);
+      }
+    }
+
+    fetchUserData();
+  }, [user]);
 
   const handleNext = () => {
     if (currentStep === 0 && !selectedMethod) {
@@ -137,11 +209,14 @@ export default function PaymentPage() {
     try {
       // Create order first
       const orderData = {
+        orderId: `ORD${Date.now()}`,
+        customerName: formData.name,
         name: formData.name,
         email: formData.email,
         address: formData.address,
         contactNumber: formData.contactNumber,
         paymentMethod: selectedMethod,
+        totalAmount: finalTotal,
         amount: finalTotal,
         items: items.map(item => ({
           id: item.id,
@@ -181,6 +256,19 @@ export default function PaymentPage() {
         throw new Error(uploadResult.error || 'Failed to upload receipt');
       }
 
+      // Send notification to admins
+      await fetch('/api/orders/send-admin-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...orderData,
+          orderId: orderResult.orderId,
+          receiptUrl: uploadResult.url
+        }),
+      });
+      
       // Clear cart and show success message
       clearCart();
       
@@ -214,6 +302,10 @@ export default function PaymentPage() {
   }
 
   if (isSubmitting) {
+    return <SimpleLoading />;
+  }
+
+  if (isLoadingUserData) {
     return <SimpleLoading />;
   }
 
@@ -279,9 +371,6 @@ export default function PaymentPage() {
                       </div>
                       <div>
                         <p className="font-medium">{method.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Account: {method.accountNumber}
-                        </p>
                       </div>
                     </div>
                   </Label>
@@ -312,12 +401,14 @@ export default function PaymentPage() {
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  Email (Optional)
+                  Email
                 </Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
+                  readOnly={!!user}
+                  className={user ? "bg-muted" : ""}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
@@ -413,18 +504,35 @@ export default function PaymentPage() {
             <div className="space-y-6">
               <div className="text-center">
                 <div className="mb-4">
-                  <h3 className="font-semibold">{selectedPaymentMethod.name} Details</h3>
+                  {/* <h3 className="font-semibold">{selectedPaymentMethod.name} Details</h3>
                   <p className="text-muted-foreground">Account Name: {selectedPaymentMethod.accountName}</p>
-                  <p className="text-muted-foreground">Account Number: {selectedPaymentMethod.accountNumber}</p>
+                  <p className="text-muted-foreground">Account Number: {selectedPaymentMethod.accountNumber}</p> */}
                   <p className="font-medium mt-2">Amount to Pay: {formatPrice(finalTotal)}</p>
                 </div>
-                <div className="relative w-[600px] h-[600px] mx-auto mb-4">
-                  <Image
-                    src={selectedPaymentMethod.qrCode}
-                    alt={`${selectedPaymentMethod.name} QR Code`}
-                    fill
-                    className="object-contain"
-                  />
+                <div className="w-full max-w-md mx-auto space-y-4">
+                  <div className="relative w-full h-96">
+                    <Image
+                      src={selectedPaymentMethod.qrCode}
+                      alt={`${selectedPaymentMethod.name} QR Code`}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex items-center justify-center gap-2"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = selectedPaymentMethod.qrCode;
+                      link.download = `${selectedPaymentMethod.name}-QR.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <ArrowDown className="h-4 w-4" /> Download QR
+                  </Button>
                 </div>
               </div>
               
